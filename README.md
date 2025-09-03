@@ -4,4 +4,4 @@ very cool repo !
 
 ## TODO
 
-- fix configs
+- postprocessing

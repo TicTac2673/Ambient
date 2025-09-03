@@ -5,15 +5,13 @@ import fr.ambient.util.InstanceAccess;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.nio.file.Files;
 
 @Getter
 @Setter
 public class Config implements InstanceAccess {
-
-    private final File directory = new File(System.getProperty("java.io.tmpdir"));
 
     private final String name;
 
@@ -21,13 +19,34 @@ public class Config implements InstanceAccess {
         this.name = name;
     }
 
-    public File getF(){
-        return new File(directory, name);
+    public File getConfigFile() {
+        File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+        configDir.mkdirs();
+        return new File(configDir, name + ".json");
     }
 
     @SneakyThrows
     public void write() {
-        FileUtils.write(new File(directory, name), ConfigUtil.write());
+        String configData = ConfigUtil.write();
+        Files.write(getConfigFile().toPath(), configData.getBytes());
     }
 
+    public boolean exists() {
+        return getConfigFile().exists();
+    }
+
+    public long getSize() {
+        File configFile = getConfigFile();
+        return configFile.exists() ? configFile.length() : 0;
+    }
+
+    public long getLastModified() {
+        File configFile = getConfigFile();
+        return configFile.exists() ? configFile.lastModified() : 0;
+    }
+
+    @Override
+    public String toString() {
+        return "Config{name='" + name + "', exists=" + exists() + "}";
+    }
 }

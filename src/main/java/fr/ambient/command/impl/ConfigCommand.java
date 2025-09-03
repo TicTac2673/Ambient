@@ -3,18 +3,19 @@ package fr.ambient.command.impl;
 import com.google.gson.JsonObject;
 import fr.ambient.Ambient;
 import fr.ambient.command.Command;
+import fr.ambient.config.Config;
+import fr.ambient.util.ConfigUtil;
 import fr.ambient.util.player.ChatUtil;
+import fr.ambient.util.system.FileUtil;
 import lombok.SneakyThrows;
-import org.lwjglx.Sys;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Base64;
+import java.util.Arrays;
 
+import static fr.ambient.util.InstanceAccess.mc;
 
 public class ConfigCommand extends Command {
-
 
     public ConfigCommand() {
         super("config", "c");
@@ -27,71 +28,132 @@ public class ConfigCommand extends Command {
             String[] words = message.split(" ");
 
             if (words.length < 2 || words.length > 3) {
-                ChatUtil.display("Invalid arguments! Usage: .config <save|load|list> [name]");
+                ChatUtil.display("§cInvalid arguments!");
+                ChatUtil.display("§7Usage: §f.config <save|load|list|delete> [name]");
+                ChatUtil.display("§7Examples:");
+                ChatUtil.display("§f  .config save myconfig");
+                ChatUtil.display("§f  .config load myconfig");
+                ChatUtil.display("§f  .config list");
+                ChatUtil.display("§f  .config delete myconfig");
                 return;
             }
 
             String action = words[1].toLowerCase();
-            String config = words.length == 3 ? words[2] : "default";
+            String configName = words.length == 3 ? words[2] : "default";
 
             switch (action) {
-                case "list" -> {
-                    JsonObject object3 = new JsonObject();
-
-                    object3.addProperty("id", "config");
-                    object3.addProperty("action", "list");
-//                    Ambient.getInstance().getWsBackend().sendMessageWithToken(object3);
-                }
-
-                case "save" -> {
-                    File drm = Ambient.getInstance().getConfigManager().saveConfigbb();
-
-                    JsonObject object4 = new JsonObject();
-
-                    object4.addProperty("id", "config");
-                    object4.addProperty("action", "save");
-                    object4.addProperty("name", config);
-                    object4.addProperty("config", Base64.getEncoder().encodeToString(String.join("\n", Files.readAllLines(drm.toPath())).getBytes(StandardCharsets.UTF_8)));
-                    object4.addProperty("autosave", false);
-                    drm.delete();
-//                    Ambient.getInstance().getWsBackend().sendMessageWithToken(object4);
-
-                }
-                case "load" ->{
-                    JsonObject object5 = new JsonObject();
-
-                    object5.addProperty("id", "config");
-                    object5.addProperty("action", "load");
-                    object5.addProperty("name", config);
-//                    Ambient.getInstance().getWsBackend().sendMessageWithToken(object5);
-                }
-                case "share" -> {
-                    JsonObject object5 = new JsonObject();
-
-                    object5.addProperty("id", "config");
-                    object5.addProperty("action", "share");
-                    object5.addProperty("name", config);
-//                    Ambient.getInstance().getWsBackend().sendMessageWithToken(object5);
-                }
-                case "loadshared" -> {
-                    JsonObject object5 = new JsonObject();
-
-                    object5.addProperty("id", "config");
-                    object5.addProperty("action", "loadshared");
-                    object5.addProperty("cfgid", config);
-//                    Ambient.getInstance().getWsBackend().sendMessageWithToken(object5);
-                }
-                case "delete" -> {
-                    JsonObject object5 = new JsonObject();
-
-                    object5.addProperty("id", "config");
-                    object5.addProperty("action", "delete");
-                    object5.addProperty("name", config);
-//                    Ambient.getInstance().getWsBackend().sendMessageWithToken(object5);
+                case "list" -> listLocalConfigs();
+                case "save" -> saveLocalConfig(configName);
+                case "load" -> loadLocalConfig(configName);
+                case "delete" -> deleteLocalConfig(configName);
+                default -> {
+                    ChatUtil.display("§cUnknown action: " + action);
+                    ChatUtil.display("§7Available actions: §fsave, load, list, delete");
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            ChatUtil.display("§cError executing config command: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
+    private void listLocalConfigs() {
+        File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+        configDir.mkdirs();
+
+        File[] configs = configDir.listFiles((dir, name) -> name.endsWith(".json"));
+
+        if (configs == null || configs.length == 0) {
+            ChatUtil.display("§7No configs found.");
+            return;
+        }
+
+        ChatUtil.display("§aLocal Configs:");
+        Arrays.stream(configs)
+                .map(file -> file.getName().replace(".json", ""))
+                .sorted()
+                .forEach(name -> ChatUtil.display("§7  - §f" + name));
+
+        ChatUtil.display("§7Total: §f" + configs.length + " §7configs");
+    }
+
+    private void saveLocalConfig(String configName) {
+        try {
+            File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+            configDir.mkdirs();
+
+            File configFile = new File(configDir, configName + ".json");
+            String configData = ConfigUtil.write();
+
+            Files.write(configFile.toPath(), configData.getBytes());
+
+            ChatUtil.display("§aConfig saved: §f" + configName);
+
+            Config config = new Config(configName);
+            Ambient.getInstance().getConfigManager().getConfigs().put(configName, config);
+
+        } catch (Exception e) {
+            ChatUtil.display("§cError saving config: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void loadLocalConfig(String configName) {
+        try {
+            File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+            File configFile = new File(configDir, configName + ".json");
+
+            if (!configFile.exists()) {
+                ChatUtil.display("§cConfig not found: §f" + configName);
+                ChatUtil.display("§7Use §f.config list §7to see available configs");
+                return;
+            }
+
+            JsonObject configData = FileUtil.readJsonFromFile(configFile.getAbsolutePath());
+            ConfigUtil.read(configData);
+
+            ChatUtil.display("§aConfig loaded: §f" + configName);
+
+            Config config = new Config(configName);
+            Ambient.getInstance().getConfigManager().setActiveConfig(config);
+
+        } catch (Exception e) {
+            ChatUtil.display("§cError loading config: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void deleteLocalConfig(String configName) {
+        try {
+            if (configName.equals("default")) {
+                ChatUtil.display("§cCannot delete default config!");
+                return;
+            }
+
+            File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+            File configFile = new File(configDir, configName + ".json");
+
+            if (!configFile.exists()) {
+                ChatUtil.display("§cConfig not found: §f" + configName);
+                return;
+            }
+
+            if (configFile.delete()) {
+                ChatUtil.display("§aConfig deleted: §f" + configName);
+
+                Ambient.getInstance().getConfigManager().getConfigs().remove(configName);
+
+                if (Ambient.getInstance().getConfigManager().getActiveConfig() != null &&
+                        Ambient.getInstance().getConfigManager().getActiveConfig().getName().equals(configName)) {
+                    loadLocalConfig("default");
+                }
+            } else {
+                ChatUtil.display("§cFailed to delete config: §f" + configName);
+            }
+
+        } catch (Exception e) {
+            ChatUtil.display("§cError deleting config: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

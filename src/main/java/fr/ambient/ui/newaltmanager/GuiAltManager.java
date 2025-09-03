@@ -39,7 +39,7 @@ public class GuiAltManager extends GuiScreen {
     private NewAlt selectedAlt;
     private ArrayList<AltManagerButton> buttons = new ArrayList<>();
 
-    public final MicrosoftAuthenticator authenticator = new MicrosoftAuthenticator(this, "526b3e37-6aa9-45ef-989f-ed84bfb47f18", "aY78Q~1zman1vukdI.ZzirYvGsWkxY0pjBOLFcEB");
+    public final MicrosoftAuthenticator authenticator = new MicrosoftAuthenticator(this);
 
     @Getter
     @Setter

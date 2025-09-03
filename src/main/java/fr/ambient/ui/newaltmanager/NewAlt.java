@@ -100,7 +100,7 @@ public class NewAlt {
     }
 
     public void refreshAndLogin() {
-        MicrosoftAuthenticator authenticator = new MicrosoftAuthenticator("526b3e37-6aa9-45ef-989f-ed84bfb47f18", "aY78Q~1zman1vukdI.ZzirYvGsWkxY0pjBOLFcEB");
+        MicrosoftAuthenticator authenticator = new MicrosoftAuthenticator();
         authenticator.getToken(refreshToken);
     }
 

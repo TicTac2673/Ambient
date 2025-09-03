@@ -34,7 +34,7 @@ public class ClickGui extends Module {
         }
 
         try {
-            File drm = Ambient.getInstance().getConfigManager().saveConfigbb();
+            File drm = new File(Ambient.getInstance().getConfigManager().saveConfig());
 
             JsonObject object4 = new JsonObject();
 

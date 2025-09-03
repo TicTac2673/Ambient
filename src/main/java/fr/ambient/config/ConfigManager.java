@@ -1,14 +1,13 @@
 package fr.ambient.config;
 
 import fr.ambient.Ambient;
+import fr.ambient.util.ConfigUtil;
 import fr.ambient.util.InstanceAccess;
+import fr.ambient.util.system.FileUtil;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.SneakyThrows;
-import okhttp3.*;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -16,71 +15,143 @@ import java.util.UUID;
 @Getter
 @Setter
 public class ConfigManager implements InstanceAccess {
-    public static final Map<String, Config> configs = new HashMap<>();
+    private static final Map<String, Config> configs = new HashMap<>();
     private Config activeConfig;
 
-
-    public HashMap<String, String> userConfigList = new HashMap<>(); // name
-    public HashMap<String, String> onlineConfigList = new HashMap<>();
-
     public void init() {
+        File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+        configDir.mkdirs();
 
+        loadExistingConfigs();
+
+        if (getConfig("default") == null) {
+            Config defaultConfig = new Config("default");
+            configs.put("default", defaultConfig);
+            setActiveConfig(defaultConfig);
+            saveConfig("default");
+        } else {
+            setActiveConfig(getConfig("default"));
+        }
     }
 
     public void stop() {
-        if (getConfig("default") == null) {
+        if (activeConfig != null) {
+            saveConfig(activeConfig.getName());
+        } else if (getConfig("default") == null) {
             Config config = new Config("default");
-            config.write();
-        } else getConfig("default").write();
+            configs.put("default", config);
+            saveConfig("default");
+        } else {
+            saveConfig("default");
+        }
+    }
+
+    private void loadExistingConfigs() {
+        File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+        if (!configDir.exists()) return;
+
+        File[] configFiles = configDir.listFiles((dir, name) -> name.endsWith(".json"));
+        if (configFiles == null) return;
+
+        for (File configFile : configFiles) {
+            String configName = configFile.getName().replace(".json", "");
+            Config config = new Config(configName);
+            configs.put(configName, config);
+        }
     }
 
     public Config getConfig(String name) {
-        return configs.keySet().stream().filter(key -> key.equalsIgnoreCase(name)).findFirst().map(configs::get).orElse(null);
+        return configs.get(name);
+    }
+
+    public Map<String, Config> getConfigs() {
+        return configs;
     }
 
     public String saveConfig() {
-        String rdm = UUID.randomUUID().toString();
-        Config config = new Config(rdm);
-        config.write();
-        return rdm;
-    }
-    public File saveConfigbb() {
-        String rdm = UUID.randomUUID().toString();
-        Config config = new Config(rdm);
-        config.write();
-        return config.getF();
+        String randomName = UUID.randomUUID().toString();
+        Config config = new Config(randomName);
+        configs.put(randomName, config);
+        saveConfig(randomName);
+        return randomName;
     }
 
-    @SneakyThrows
-    public String uploadConfig(String name, File file){
+    public void saveConfig(String configName) {
+        try {
+            File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+            configDir.mkdirs();
 
+            File configFile = new File(configDir, configName + ".json");
+            String configData = ConfigUtil.write();
 
-        OkHttpClient client = new OkHttpClient();
-        MediaType mediaType = MediaType.parse("multipart/form-data");
+            java.nio.file.Files.write(configFile.toPath(), configData.getBytes());
 
-        // Create the multipart request body
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("file", "file.txt",
-                        RequestBody.create(mediaType, file))
-                .build();
-
-        // Create the POST request
-        Request request = new Request.Builder()
-                .url("https://legitclient.com/uploadConfig?token=" + Ambient.getInstance().getToken() + "&name=" + name)
-                .post(requestBody)
-                .build();
-
-        // Execute the request
-        try (Response response = client.newCall(request).execute()) {
-            if (response.isSuccessful()) {
-                return response.body().string();
-            } else {
-                System.out.println("File upload failed. Response code: " + response.code());
+            if (!configs.containsKey(configName)) {
+                Config config = new Config(configName);
+                configs.put(configName, config);
             }
-        } catch (IOException e) {
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        return "NoConfigUploaded";
+    }
+
+    public boolean loadConfig(String configName) {
+        try {
+            File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+            File configFile = new File(configDir, configName + ".json");
+
+            if (!configFile.exists()) {
+                return false;
+            }
+
+            com.google.gson.JsonObject configData = FileUtil.readJsonFromFile(configFile.getAbsolutePath());
+            ConfigUtil.read(configData);
+
+            Config config = configs.get(configName);
+            if (config == null) {
+                config = new Config(configName);
+                configs.put(configName, config);
+            }
+            setActiveConfig(config);
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteConfig(String configName) {
+        if (configName.equals("default")) {
+            return false;
+        }
+
+        try {
+            File configDir = new File(mc.mcDataDir, "/ambient/configs/");
+            File configFile = new File(configDir, configName + ".json");
+
+            boolean deleted = configFile.delete();
+            if (deleted) {
+                configs.remove(configName);
+
+                if (activeConfig != null && activeConfig.getName().equals(configName)) {
+                    setActiveConfig(getConfig("default"));
+                }
+            }
+
+            return deleted;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public String[] getConfigNames() {
+        return configs.keySet().toArray(new String[0]);
+    }
+
+    public int getConfigCount() {
+        return configs.size();
     }
 }

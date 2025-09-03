@@ -4,4 +4,4 @@ very cool repo !
 
 ## TODO
 
-- fix configs & alt manager 
+- fix configs

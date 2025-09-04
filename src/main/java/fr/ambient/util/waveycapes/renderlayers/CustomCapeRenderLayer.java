@@ -4,7 +4,7 @@ import cc.polymorphism.annot.ExcludeConstant;
 import cc.polymorphism.annot.ExcludeFlow;
 import fr.ambient.Ambient;
 import fr.ambient.module.impl.render.player.Cosmetics;
-import fr.ambient.protection.ProtectedLaunch;
+import fr.ambient.ProtectedLaunch;
 import fr.ambient.util.render.img.ImageObject;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;

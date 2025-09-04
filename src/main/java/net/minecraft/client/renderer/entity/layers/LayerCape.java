@@ -1,7 +1,7 @@
 package net.minecraft.client.renderer.entity.layers;
 
 import fr.ambient.module.impl.render.player.Cosmetics;
-import fr.ambient.protection.ProtectedLaunch;
+import fr.ambient.ProtectedLaunch;
 import fr.ambient.Ambient;
 import fr.ambient.event.impl.render.RenderCapeLayerEvent;
 import fr.ambient.util.render.img.ImageObject;

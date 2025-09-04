@@ -1,11 +1,9 @@
-package fr.ambient.protection;
+package fr.ambient;
 
 import cc.polymorphism.annot.IncludeReference;
 import cc.polymorphismj2c.annot.Native;
-import com.google.gson.JsonObject;
 import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import de.florianmichael.viamcp.ViaMCP;
-import fr.ambient.Ambient;
 import fr.ambient.anticheat.AnticheatManager;
 import fr.ambient.command.CommandManager;
 import fr.ambient.command.impl.*;
@@ -46,22 +44,10 @@ import fr.ambient.module.impl.render.world.Breadcrumbs;
 import fr.ambient.module.impl.render.world.BreakProgress;
 import fr.ambient.module.impl.render.world.KillEffects;
 import fr.ambient.module.impl.skyblock.Test;
-import fr.ambient.protection.backend.api.HWID;
 import fr.ambient.theme.ThemeManager;
 import fr.ambient.ui.mainmenu.wouf.WoufMainMenuScreen;
-import fr.ambient.util.player.ChatUtil;
 import lombok.SneakyThrows;
-import net.minecraft.client.Minecraft;
 import org.lwjglx.opengl.Display;
-
-import java.io.File;
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
-import java.net.URISyntaxException;
-import java.util.Scanner;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @Native
 @IncludeReference
@@ -70,11 +56,6 @@ public class ProtectedLaunch {
 
     @SneakyThrows
     public static void init(String uid) throws Throwable {
-
-        Ambient.getInstance().setUid("1");
-        Ambient.getInstance().setToken("lol");
-        Ambient.getInstance().setUsername("User");
-        Ambient.getInstance().setRank("Dev");
         Ambient.getInstance().getConfig().load();
 
         ViaMCP.create();
@@ -89,133 +70,7 @@ public class ProtectedLaunch {
         // TODO: CHANGE TO FALSE BEFORE BUILD
         final boolean developmentSwitch = true;
 
-//        { // Blacklisted argument check
-//            if (!developmentSwitch) {
-//                final String[] naughtyFlags = {
-//                        "-agentlib:jdwp",
-//                        "-XBootclasspath",
-//                        "-javaagent",
-//                        "-Xdebug",
-//                        "-agentlib",
-//                        "-Xrunjdwp",
-//                        "-Xnoagent",
-//                        "-verbose",
-//                        "-DproxySet",
-//                        "-DproxyHost",
-//                        "-DproxyPort",
-//                        "-Djavax.net.ssl.trustStore",
-//                        "-Djavax.net.ssl.trustStorePassword"
-//                };
-//
-//                RuntimeMXBean runtimeBean = ManagementFactory.getRuntimeMXBean();
-//                String jvmArgs = runtimeBean.getInputArguments().toString();
-//
-//                boolean dashes = true, counter = true, detected = false;
-//
-//                int i = 0;
-//                for (String str : naughtyFlags) {
-//                    if (!str.contains("-")) {
-//                        dashes = false;
-//                        break;
-//                    }
-//
-//                    ++i;
-//                }
-//
-//                if (i != 13) {
-//                    counter = false;
-//                }
-//
-//                for (String arg : naughtyFlags) {
-//                    if (jvmArgs.contains(arg)) {
-//                        detected = true;
-//                        break;
-//                    }
-//                }
-//
-//                if (!dashes || !counter || detected) {
-//                    System.out.println("Environment Integrity Issue 0x01");
-//
-//                    for (long l = Long.MIN_VALUE; l < Long.MAX_VALUE; ++l) {
-//                        --l;
-//                    }
-//
-//                    return;
-//                }
-//            }
-//        }
-//
-//        { // Hosts Check
-//            if (System.getProperty("os.name").toLowerCase().startsWith("win")) {
-//                File file = new File("C:\\Windows\\System32\\drivers\\etc", "hosts");
-//                if (file.exists()) {
-//                    Scanner reader = new Scanner(file);
-//                    while (reader.hasNextLine()) {
-//                        String data = reader.nextLine();
-//                        if (data.toLowerCase().contains("legitclient.com")
-//                                || data.toLowerCase().contains("104.21.71.252")
-//                                || data.toLowerCase().contains("172.67.172.158")
-//                                || data.toLowerCase().contains("45.136.70.175")) {
-//                            System.out.println("Environment Integrity Issue 0x02");
-//
-//                            System.exit(0);
-//
-//                            return;
-//                        }
-//                    }
-//                    reader.close();
-//                }
-//            }
-//        }
-//
-//
-//        boolean done = false;
-//        while (!done) {
-//            try {
-//                Ambient.getInstance().setWsBackend(new WSBackend());
-//            } catch (URISyntaxException e) {
-//                throw new RuntimeException(e);
-//            }
-//            done = Ambient.getInstance().getWsBackend().connectFullyBlock();
-//        }
-
         System.err.println("DONE ????");
-//
-//        WSBackend wsBackend = Ambient.getInstance().getWsBackend();
-//
-//        JsonObject sent = new JsonObject();
-//
-//        sent.addProperty("id", "login");
-//        sent.addProperty("uid", uid);
-//        sent.addProperty("hwid", HWID.getHWID());
-//        sent.addProperty("clientid", "ambient");
-//        sent.addProperty("clientVersion", "Release");
-//
-//        wsBackend.sendMessage(sent);
-//
-//        while (Ambient.getInstance().getToken() == null) {
-//            Thread.sleep(50);
-//        }
-//
-//
-//        JsonObject object1 = new JsonObject();
-//
-//        object1.addProperty("id", "userinfo");
-//        object1.addProperty("token", Ambient.getInstance().getToken());
-//
-//        wsBackend.sendMessage(object1);
-//
-//        JsonObject object2 = new JsonObject();
-//
-//        object2.addProperty("id", "clientdata");
-//        object2.addProperty("token", Ambient.getInstance().getToken());
-//
-//        wsBackend.sendMessage(object2);
-//
-//        while (Ambient.getInstance().getExternalValueManager().get("names") == null || Ambient.getInstance().getExternalValueManager().get("names").values == null || Ambient.getInstance().getExternalValueManager().get("names").values.isEmpty()) {
-//            Thread.sleep(500);
-//        }
-
 
         CUSTOM_CAPE = new Cosmetics();
 
@@ -384,7 +239,7 @@ public class ProtectedLaunch {
         Ambient.getInstance().setCheckManager(new AnticheatManager());
         Ambient.getInstance().setThemeManager(new ThemeManager());
         Ambient.getInstance().setIrc(new IRC());
-        Display.setTitle("Ambient " + Ambient.getInstance().getVersion() + " | " + Ambient.getInstance().getUsername() + " : " + Ambient.getInstance().getUid());
+        Display.setTitle("Ambient " + Ambient.getInstance().getVersion() + " | " + Ambient.getInstance().getUsername() + " [" + Ambient.getInstance().getUid() + "]");
         HypixelComponent.loadCheaters();
         HUD hud = Ambient.getInstance().getModuleManager().getModule(HUD.class);
         hud.setEnabled(true);
@@ -398,58 +253,6 @@ public class ProtectedLaunch {
         Ambient.getInstance().getCustomThemeManager().save();
 
         Ambient.getInstance().setClickPatternComponent(new ClickPatternComponent());
-
-//        ScheduledExecutorService scheduler0 = Executors.newScheduledThreadPool(1);
-//        Runnable task2 = () -> {
-//            if (Ambient.getInstance().getMsSinceLast().finished(7500)) {
-//                if (!Ambient.getInstance().isTryingToReconnect()) {
-//                    Reconnect.reco();
-//                }else{
-//                    ChatUtil.display("Failed to reconnect : Already Trying. Why is this taking so long ?");
-//                }
-//            }
-//            if (Ambient.getInstance().getWsBackend() != null && Ambient.getInstance().getWsBackend().isOpen() && Ambient.getInstance().getToken() != null && !Ambient.getInstance().isTryingToReconnect()) {
-//
-//                JsonObject object = new JsonObject();
-//
-//                object.addProperty("id", "ping");
-//                object.addProperty("token", Ambient.getInstance().getToken());
-//
-//                Ambient.getInstance().getWsBackend().sendMessage(object);
-//
-//                JsonObject object3 = new JsonObject();
-//
-//                object3.addProperty("id", "tabirc");
-//                object3.addProperty("mode", "set");
-//                object3.addProperty("username", Minecraft.getMinecraft().getSession().getUsername());
-//                Cosmetics cosmetics = Ambient.getInstance().getModuleManager().getModule(Cosmetics.class);
-//
-//                if (cosmetics.isEnabled()) {
-//                    JsonObject cc = new JsonObject();
-//
-//                    cc.addProperty("cape", cosmetics.getCapeMode());
-//                    cc.addProperty("halo", cosmetics.getHaloMode());
-//                    cc.addProperty("wing", cosmetics.wingMode.getValue());
-//
-//                    object3.add("cosmetics", cc);
-//                }
-//                Ambient.getInstance().getWsBackend().sendMessageWithToken(object3);
-//            }
-//
-//
-//        };
-//        Ambient.getInstance().getMsSinceLast().reset();
-//
-//
-//        if (Ambient.getInstance().getConfig().getValue("auto-default-config").equals("true")) {
-//            JsonObject object5 = new JsonObject();
-//            object5.addProperty("id", "config");
-//            object5.addProperty("action", "load");
-//            object5.addProperty("name", "default");
-//            Ambient.getInstance().getWsBackend().sendMessageWithToken(object5);
-//        }
-//
-//        scheduler0.scheduleAtFixedRate(task2, 5, 1, TimeUnit.SECONDS);
 
         Ambient.getInstance().setMainMenuScreen(new WoufMainMenuScreen());
 

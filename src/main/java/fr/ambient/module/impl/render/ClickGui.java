@@ -34,16 +34,17 @@ public class ClickGui extends Module {
         }
 
         try {
-            File drm = new File(Ambient.getInstance().getConfigManager().saveConfig());
+            // we disabled autosave feature because ambient uses cloud config system so we switch to local config system
+//          File drm = new File(Ambient.getInstance().getConfigManager().saveConfig());
 
             JsonObject object4 = new JsonObject();
 
             object4.addProperty("id", "config");
             object4.addProperty("action", "save");
             object4.addProperty("name", "default");
-            object4.addProperty("config", Base64.getEncoder().encodeToString(String.join("\n", Files.readAllLines(drm.toPath())).getBytes(StandardCharsets.UTF_8)));
+//          object4.addProperty("config", Base64.getEncoder().encodeToString(String.join("\n", Files.readAllLines(drm.toPath())).getBytes(StandardCharsets.UTF_8)));
             object4.addProperty("autosave", true);
-            drm.delete();
+//          drm.delete();
 //            Ambient.getInstance().getWsBackend().sendMessageWithToken(object4);
 
         }catch (Exception e){

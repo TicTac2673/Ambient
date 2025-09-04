@@ -21,177 +21,271 @@ import java.util.Objects;
 @UtilityClass
 public class ConfigUtil {
 
+    public void read(JsonObject object) {
+        try {
+            ScaledResolution sr = new ScaledResolution(Minecraft.getMinecraft());
 
-    public void read(JsonObject object){
-        ScaledResolution sr = new ScaledResolution(Minecraft.getMinecraft());
-        String savedate = object.get("savedate").getAsString(); // if needed
-        String version = object.get("version").getAsString(); // if needed
-        String theme = object.get("theme").getAsString();
+            String savedate = getStringSafe(object, "savedate", "0");
+            String version = getStringSafe(object, "version", Ambient.getInstance().getVersion());
+            String theme = getStringSafe(object, "theme", "Aqua");
 
-
-        if(!Objects.equals(version, Ambient.getInstance().getVersion())){
-            ChatUtil.display("Loading outdated config...");
-        }
-
-        Theme dogTheme = Ambient.getInstance().getThemeManager().getThemeByName(theme);
-        if (dogTheme == null) dogTheme = Ambient.getInstance().getThemeManager().getThemeByName("Aqua");
-        Ambient.getInstance().getHud().setCurrentTheme(dogTheme);
-
-        JsonObject modulesData = object.get("moduleData").getAsJsonObject();
-
-        for (Map.Entry<String, JsonElement> entry : modulesData.entrySet()) {
-            Module module = Ambient.getInstance().getModuleManager().getModule(entry.getKey());
-            if(module == null){
-                continue;
+            if (!Objects.equals(version, Ambient.getInstance().getVersion())) {
+                ChatUtil.display("Loading outdated config...");
             }
 
-            JsonObject moduleData = modulesData.get(entry.getKey()).getAsJsonObject();
-            if(!module.getName().equals("ClickGUI")){
-                module.setEnabled(moduleData.get("enabled").getAsBoolean());
-            }
-            module.setCustomName(moduleData.get("customname").getAsString());
-            module.setKeyBind(moduleData.get("bind").getAsInt());
-
-            try {
-                module.setShown(moduleData.get("showModule").getAsBoolean());
-            }catch (Exception e){
-
+            Theme dogTheme = Ambient.getInstance().getThemeManager().getThemeByName(theme);
+            if (dogTheme == null) dogTheme = Ambient.getInstance().getThemeManager().getThemeByName("Aqua");
+            if (dogTheme != null) {
+                Ambient.getInstance().getHud().setCurrentTheme(dogTheme);
             }
 
-            if(module.isDraggable() && moduleData.has("dragging")){
-                JsonObject dragMoData = moduleData.get("dragging").getAsJsonObject();
-                module.setX(dragMoData.get("x").getAsInt());
-                module.setY(dragMoData.get("y").getAsInt());
-                if(module.getX() > sr.getScaledWidth()){
-                    module.setX((int) (Math.min(module.getX(), sr.getScaledWidth()) - module.getWidth()));
+            if (!object.has("moduleData") || object.get("moduleData").isJsonNull()) {
+                ChatUtil.display("§cConfig has no module data!");
+                return;
+            }
+
+            JsonObject modulesData = object.get("moduleData").getAsJsonObject();
+
+            for (Map.Entry<String, JsonElement> entry : modulesData.entrySet()) {
+                try {
+                    Module module = Ambient.getInstance().getModuleManager().getModule(entry.getKey());
+                    if (module == null) {
+                        continue;
+                    }
+
+                    JsonElement moduleElement = modulesData.get(entry.getKey());
+                    if (moduleElement.isJsonNull()) {
+                        continue;
+                    }
+
+                    JsonObject moduleData = moduleElement.getAsJsonObject();
+
+                    if (!module.getName().equals("ClickGUI")) {
+                        module.setEnabled(getBooleanSafe(moduleData, "enabled", false));
+                    }
+
+                    module.setCustomName(getStringSafe(moduleData, "customname", module.getName()));
+                    module.setKeyBind(getIntSafe(moduleData, "bind", 0));
+
+                    try {
+                        module.setShown(getBooleanSafe(moduleData, "showModule", true));
+                    } catch (Exception e) {
+                        // fuck ts shit
+                    }
+
+                    if (module.isDraggable() && moduleData.has("dragging") && !moduleData.get("dragging").isJsonNull()) {
+                        JsonObject dragMoData = moduleData.get("dragging").getAsJsonObject();
+                        int x = getIntSafe(dragMoData, "x", 10);
+                        int y = getIntSafe(dragMoData, "y", 10);
+
+                        module.setX(x);
+                        module.setY(y);
+
+                        if (module.getX() > sr.getScaledWidth()) {
+                            module.setX((int) (Math.min(module.getX(), sr.getScaledWidth()) - module.getWidth()));
+                        }
+                        if (module.getY() > sr.getScaledHeight()) {
+                            module.setY((int) (Math.min(module.getY(), sr.getScaledHeight()) - module.getHeight()));
+                        }
+                    }
+
+                    if (moduleData.has("properties") && !moduleData.get("properties").isJsonNull()) {
+                        JsonObject moduleSetting = moduleData.get("properties").getAsJsonObject();
+                        applySetting(module.getPropertyList(), moduleSetting);
+                    }
+                } catch (Exception e) {
+                    ChatUtil.display("§cError loading module: " + entry.getKey());
+                    e.printStackTrace();
                 }
-                if(module.getY() > sr.getScaledHeight()){
-                    module.setX((int) (Math.min(module.getY(), sr.getScaledHeight()) - module.getHeight()));
-                }
-
             }
-
-            JsonObject moduleSetting = moduleData.get("properties").getAsJsonObject();
-            applySetting(module.getPropertyList(), moduleSetting);
+        } catch (Exception e) {
+            ChatUtil.display("§cError reading config: " + e.getMessage());
+            e.printStackTrace();
         }
-        // ya, should be ok now <3
-
     }
 
-
-    public void applySetting(List<Property<?>> settings, JsonObject object){
-
-        for(Property<?> property : settings){
+    public void applySetting(List<Property<?>> settings, JsonObject object) {
+        for (Property<?> property : settings) {
             try {
-                if(property instanceof ModeProperty modeProperty){
-                    modeProperty.setValue(object.get(modeProperty.getLabel()).getAsString());
+                String label = property.getLabel();
+                if (!object.has(label) || object.get(label).isJsonNull()) {
                     continue;
                 }
-                if(property instanceof NumberProperty numberProperty){
-                    numberProperty.setValue(object.get(numberProperty.getLabel()).getAsFloat());
-                    continue;
-                }
-                if(property instanceof BooleanProperty booleanProperty){
-                    booleanProperty.setValue(object.get(booleanProperty.getLabel()).getAsBoolean());
-                    continue;
-                }
-                if(property instanceof ColorProperty colorProperty){
-                    JsonObject colorProp = object.get(colorProperty.getLabel()).getAsJsonObject();
-                    colorProperty.setValue(new Color(colorProp.get("red").getAsInt(), colorProp.get("green").getAsInt(), colorProp.get("blue").getAsInt(), colorProp.get("alpha").getAsInt()));
-                    continue;
-                }
-                if(property instanceof MultiProperty multiProperty){
-                    JsonArray multiArray = object.get(multiProperty.getLabel()).getAsJsonArray();
-                    multiProperty.clearAll();
-                    for(JsonElement element : multiArray){
-                        multiProperty.setValueOF(element.getAsString(), true);
+
+                if (property instanceof ModeProperty modeProperty) {
+                    String value = getStringSafe(object, label, modeProperty.getValue());
+                    modeProperty.setValue(value);
+                } else if (property instanceof NumberProperty numberProperty) {
+                    float value = getFloatSafe(object, label, numberProperty.getValue());
+                    numberProperty.setValue(value);
+                } else if (property instanceof BooleanProperty booleanProperty) {
+                    boolean value = getBooleanSafe(object, label, booleanProperty.getValue());
+                    booleanProperty.setValue(value);
+                } else if (property instanceof ColorProperty colorProperty) {
+                    if (object.get(label).isJsonObject()) {
+                        JsonObject colorProp = object.get(label).getAsJsonObject();
+                        int red = getIntSafe(colorProp, "red", 255);
+                        int green = getIntSafe(colorProp, "green", 255);
+                        int blue = getIntSafe(colorProp, "blue", 255);
+                        int alpha = getIntSafe(colorProp, "alpha", 255);
+                        colorProperty.setValue(new Color(red, green, blue, alpha));
                     }
-                    continue;
+                } else if (property instanceof MultiProperty multiProperty) {
+                    if (object.get(label).isJsonArray()) {
+                        JsonArray multiArray = object.get(label).getAsJsonArray();
+                        multiProperty.clearAll();
+                        for (JsonElement element : multiArray) {
+                            if (!element.isJsonNull()) {
+                                multiProperty.setValueOF(element.getAsString(), true);
+                            }
+                        }
+                    }
+                } else if (property instanceof CompositeProperty compositeProperty) {
+                    if (object.get(label).isJsonObject()) {
+                        JsonObject compObj = object.get(label).getAsJsonObject();
+                        applySetting(compositeProperty.getChildren(), compObj);
+                    }
                 }
-                if(property instanceof CompositeProperty compositeProperty){
-                    JsonObject compObj = object.get(compositeProperty.getLabel()).getAsJsonObject();
-                    applySetting(compositeProperty.getChildren(), compObj);
-                }
-            }catch (Exception e){
+            } catch (Exception e) {
+                ChatUtil.display("§cError loading property: " + property.getLabel());
                 e.printStackTrace();
             }
-
         }
     }
 
-
-    public String write(){
-        JsonObject object = new JsonObject();
-
-        object.addProperty("savedate", System.currentTimeMillis());
-        object.addProperty("version", Ambient.getInstance().getVersion());
-        object.addProperty("author", Ambient.getInstance().getUid());
-        object.addProperty("theme", Ambient.getInstance().getThemeManager().getCurrentTheme().getName());
-
-
-        JsonObject modulesObject = new JsonObject();
-
-        for(Module module : Ambient.getInstance().getModuleManager().getObjects()){
-            JsonObject moduleObject = new JsonObject();
-            moduleObject.addProperty("enabled", module.isEnabled());
-            moduleObject.addProperty("customname", module.getCustomName());
-            moduleObject.addProperty("bind", module.getKeyBind());
-            moduleObject.addProperty("showModule", module.isShown());
-
-            if(module.isDraggable()){
-                JsonObject draggable = new JsonObject();
-
-                draggable.addProperty("x", module.getX());
-                draggable.addProperty("y", module.getY());
-
-                moduleObject.add("dragging", draggable);
+    private String getStringSafe(JsonObject object, String key, String defaultValue) {
+        try {
+            if (!object.has(key) || object.get(key).isJsonNull()) {
+                return defaultValue;
             }
-
-            JsonObject settingObject = new JsonObject();
-            addModuleSettingToJson(module.getPropertyList(), settingObject);
-
-            moduleObject.add("properties", settingObject);
-
-            modulesObject.add(module.getName(), moduleObject);
+            return object.get(key).getAsString();
+        } catch (Exception e) {
+            return defaultValue;
         }
-
-        object.add("moduleData", modulesObject);
-
-        return object.toString();
     }
 
-    public void addModuleSettingToJson(List<Property<?>> properties, JsonObject object){
-        for(Property<?> property : properties){
-            if(property instanceof ModeProperty modeProperty){
-                object.addProperty(modeProperty.getLabel(), modeProperty.getValue());
+    private int getIntSafe(JsonObject object, String key, int defaultValue) {
+        try {
+            if (!object.has(key) || object.get(key).isJsonNull()) {
+                return defaultValue;
             }
-            if(property instanceof NumberProperty numberProperty){
-                object.addProperty(numberProperty.getLabel(), numberProperty.getValue());
-            }
-            if(property instanceof BooleanProperty booleanProperty){
-                object.addProperty(booleanProperty.getLabel(), booleanProperty.getValue());
-            }
-            if(property instanceof ColorProperty colorProperty){
-                JsonObject colObj = new JsonObject();
+            return object.get(key).getAsInt();
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
 
-                colObj.addProperty("red", colorProperty.getValue().getRed());
-                colObj.addProperty("green", colorProperty.getValue().getGreen());
-                colObj.addProperty("blue", colorProperty.getValue().getBlue());
-                colObj.addProperty("alpha", colorProperty.getValue().getAlpha());
-
-                object.add(colorProperty.getLabel(), colObj);
+    private float getFloatSafe(JsonObject object, String key, float defaultValue) {
+        try {
+            if (!object.has(key) || object.get(key).isJsonNull()) {
+                return defaultValue;
             }
-            if(property instanceof MultiProperty multiProperty){
-                JsonArray multObj = new JsonArray();
-                for(String s : multiProperty.getValue()){
-                    multObj.add(s);
+            return object.get(key).getAsFloat();
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private boolean getBooleanSafe(JsonObject object, String key, boolean defaultValue) {
+        try {
+            if (!object.has(key) || object.get(key).isJsonNull()) {
+                return defaultValue;
+            }
+            return object.get(key).getAsBoolean();
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    public String write() {
+        try {
+            JsonObject object = new JsonObject();
+
+            object.addProperty("savedate", System.currentTimeMillis());
+            object.addProperty("version", Ambient.getInstance().getVersion());
+            object.addProperty("author", Ambient.getInstance().getUid());
+
+            if (Ambient.getInstance().getThemeManager().getCurrentTheme() != null) {
+                object.addProperty("theme", Ambient.getInstance().getThemeManager().getCurrentTheme().getName());
+            } else {
+                object.addProperty("theme", "Aqua");
+            }
+
+            JsonObject modulesObject = new JsonObject();
+
+            for (Module module : Ambient.getInstance().getModuleManager().getObjects()) {
+                try {
+                    JsonObject moduleObject = new JsonObject();
+                    moduleObject.addProperty("enabled", module.isEnabled());
+                    moduleObject.addProperty("customname", module.getCustomName());
+                    moduleObject.addProperty("bind", module.getKeyBind());
+                    moduleObject.addProperty("showModule", module.isShown());
+
+                    if (module.isDraggable()) {
+                        JsonObject draggable = new JsonObject();
+                        draggable.addProperty("x", module.getX());
+                        draggable.addProperty("y", module.getY());
+                        moduleObject.add("dragging", draggable);
+                    }
+
+                    JsonObject settingObject = new JsonObject();
+                    addModuleSettingToJson(module.getPropertyList(), settingObject);
+                    moduleObject.add("properties", settingObject);
+
+                    modulesObject.add(module.getName(), moduleObject);
+                } catch (Exception e) {
+                    ChatUtil.display("§cError saving module: " + module.getName());
+                    e.printStackTrace();
                 }
-                object.add(multiProperty.getLabel(), multObj);
             }
-            if(property instanceof CompositeProperty compositeProperty){
-                JsonObject compObj = new JsonObject();
-                addModuleSettingToJson(compositeProperty.getChildren(), compObj);
-                object.add(compositeProperty.getLabel(), compObj);
+
+            object.add("moduleData", modulesObject);
+            return object.toString();
+        } catch (Exception e) {
+            ChatUtil.display("§cError writing config: " + e.getMessage());
+            e.printStackTrace();
+            return "{}";
+        }
+    }
+
+    public void addModuleSettingToJson(List<Property<?>> properties, JsonObject object) {
+        for (Property<?> property : properties) {
+            try {
+                if (property instanceof ModeProperty modeProperty) {
+                    object.addProperty(modeProperty.getLabel(), modeProperty.getValue());
+                } else if (property instanceof NumberProperty numberProperty) {
+                    object.addProperty(numberProperty.getLabel(), numberProperty.getValue());
+                } else if (property instanceof BooleanProperty booleanProperty) {
+                    object.addProperty(booleanProperty.getLabel(), booleanProperty.getValue());
+                } else if (property instanceof ColorProperty colorProperty) {
+                    JsonObject colObj = new JsonObject();
+                    Color color = colorProperty.getValue();
+                    if (color != null) {
+                        colObj.addProperty("red", color.getRed());
+                        colObj.addProperty("green", color.getGreen());
+                        colObj.addProperty("blue", color.getBlue());
+                        colObj.addProperty("alpha", color.getAlpha());
+                    } else {
+                        colObj.addProperty("red", 255);
+                        colObj.addProperty("green", 255);
+                        colObj.addProperty("blue", 255);
+                        colObj.addProperty("alpha", 255);
+                    }
+                    object.add(colorProperty.getLabel(), colObj);
+                } else if (property instanceof MultiProperty multiProperty) {
+                    JsonArray multObj = new JsonArray();
+                    for (String s : multiProperty.getValue()) {
+                        multObj.add(s);
+                    }
+                    object.add(multiProperty.getLabel(), multObj);
+                } else if (property instanceof CompositeProperty compositeProperty) {
+                    JsonObject compObj = new JsonObject();
+                    addModuleSettingToJson(compositeProperty.getChildren(), compObj);
+                    object.add(compositeProperty.getLabel(), compObj);
+                }
+            } catch (Exception e) {
+                ChatUtil.display("§cError saving property: " + property.getLabel());
+                e.printStackTrace();
             }
         }
     }

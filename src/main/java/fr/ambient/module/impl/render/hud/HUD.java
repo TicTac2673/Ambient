@@ -641,7 +641,7 @@ public class HUD extends Module {
                 }
             }
         }
-    }
+    } 
 
     private void renderText(String text, float textOffsetX, float offset, Color color) {
         if (textCase.is("Lower")) {

@@ -12,6 +12,7 @@ import fr.ambient.ui.framework.UIComponent;
 import fr.ambient.ui.framework.impl.UITextComponent;
 import fr.ambient.util.player.MoveUtil;
 import fr.ambient.util.render.ColorUtil;
+import fr.ambient.util.render.GlowUtil;
 import fr.ambient.util.render.RenderUtil;
 import fr.ambient.util.render.batching.RenderBatch;
 import fr.ambient.util.render.batching.impl.RoundedRectangle;
@@ -19,7 +20,10 @@ import fr.ambient.util.render.font.Fonts;
 import fr.ambient.util.render.font.TTFFontRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.util.EnumChatFormatting;
+import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
 import java.text.DecimalFormat;
@@ -28,6 +32,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+
+import static org.lwjgl.opengl.GL11C.*;
 
 public class HUD extends Module {
 
@@ -85,6 +91,9 @@ public class HUD extends Module {
 
     private final RenderBatch backgroundBatch = new RenderBatch(RenderUtil.Shapes.ROUNDED_RECT);
 
+    private Framebuffer glowFramebuffer;
+    private boolean needsGlowUpdate = true;
+
     public HUD() {
         super(54, "Displays info such as enabled modules and FPS.", ModuleCategory.RENDER);
 
@@ -121,6 +130,15 @@ public class HUD extends Module {
         setFont();
     }
 
+    @Override
+    protected void onDisable() {
+        super.onDisable();
+        if (glowFramebuffer != null) {
+            glowFramebuffer.deleteFramebuffer();
+            glowFramebuffer = null;
+        }
+    }
+
     public void setArraylist() {
         if (!arraylist.getValue() || arrayListFont == null) return;
 
@@ -128,6 +146,8 @@ public class HUD extends Module {
                 .filter(this::isModuleVisible)
                 .sorted(Comparator.comparingDouble(module -> -getModuleTextWidth(module)))
                 .toList();
+
+        needsGlowUpdate = true;
     }
 
     private boolean isModuleVisible(Module module) {
@@ -154,6 +174,8 @@ public class HUD extends Module {
             case "tahoma" -> Fonts.getTahoma(fontSize.getValue().intValue());
             default -> null;
         };
+
+        needsGlowUpdate = true;
     }
 
     UIComponent modernWatermark = new UIComponent()
@@ -185,17 +207,6 @@ public class HUD extends Module {
     @SubscribeEvent
     private void onRender2D(Render2DEvent event) {
         ScaledResolution sr = new ScaledResolution(mc);
-
-        if (Ambient.getInstance().getMsSinceLast().finished(30000)) {
-            RenderUtil.drawRect(10, 10, 350, 40, new Color(40, 40, 40, 120));
-            Fonts.getOpenSansBold(25).drawString("ALERT", 15, 15, Color.WHITE.getRGB());
-            Fonts.getOpenSansBold(16).drawString("You will get disconnected since you are no longer connected to the backend.", 15, 30, Color.WHITE.getRGB());
-            RenderUtil.drawRect(10, 48, Math.min(350 * (Ambient.getInstance().getMsSinceLast().getTime() / 60000f), 350), 2, Color.RED);
-        }
-
-        if (!Ambient.getInstance().getFlashbang().finished(2000)) {
-            RenderUtil.drawRect(0, 0, sr.getScaledWidth(), sr.getScaledHeight(), Color.WHITE);
-        }
 
         if (showInfo.getValue()) {
             DecimalFormat decimalFormat = new DecimalFormat("#.##");
@@ -328,7 +339,6 @@ public class HUD extends Module {
                 renderBackground(textWidth, offset, rectHeight, animationValue, color, secondColor, backgroundRadius);
             }
 
-
             backgroundBatch.renderBatch();
 
             renderSidebar(module, textOffsetX, textWidth, offset, rectHeight, color, secondColor, lastWidth);
@@ -340,6 +350,11 @@ public class HUD extends Module {
             scoreboardOffset = (int) Math.max(0, offset - (scoreboard.getY() - 10));
 
             lastWidth = textWidth;
+        }
+
+        if (needsGlowUpdate) {
+            renderGlowEffect();
+            needsGlowUpdate = false;
         }
     }
 
@@ -454,8 +469,7 @@ public class HUD extends Module {
 
         PostProcessing postProcessing = Ambient.getInstance().getModuleManager().getModule(PostProcessing.class);
         if (postProcessing.isEnabled()) {
-            addGlowEffect(textX, offset, textWidth, rectHeight, rounding, color, secondColor);
-            addBlurEffect(textX, offset, textWidth, rectHeight, rounding);
+            needsGlowUpdate = true;
         }
 
         backgroundBatch.addShape(RoundedRectangle.variableSolid(
@@ -467,12 +481,138 @@ public class HUD extends Module {
                 bgColor));
     }
 
-    private void addGlowEffect(float x, float y, float width, float height, float[] rounding, Color color, Color secondColor) {
+    private void renderGlowEffect() {
+        PostProcessing postProcessing = Ambient.getInstance().getModuleManager().getModule(PostProcessing.class);
 
+        if (!postProcessing.isEnabled() || !postProcessing.glow.getValue() || mc.currentScreen != null) {
+            return;
+        }
+
+        if (glowFramebuffer == null || glowFramebuffer.framebufferWidth != mc.displayWidth || glowFramebuffer.framebufferHeight != mc.displayHeight) {
+            if (glowFramebuffer != null) {
+                glowFramebuffer.deleteFramebuffer();
+            }
+            glowFramebuffer = RenderUtil.createFrameBuffer(null, true);
+        }
+
+        GlStateManager.pushMatrix();
+        int prevTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        boolean blendEnabled = GL11.glGetBoolean(GL11.GL_BLEND);
+        boolean textureEnabled = GL11.glGetBoolean(GL11.GL_TEXTURE_2D);
+
+        try {
+            glowFramebuffer.framebufferClear();
+            glowFramebuffer.bindFramebuffer(true);
+
+            GlStateManager.enableBlend();
+            GlStateManager.disableTexture2D();
+            GlStateManager.tryBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+
+            int glowLayers = 3;
+            float[] layerSizes = {6.0f, 4.0f, 2.0f};
+            float[] layerOpacities = {0.3f, 0.5f, 0.8f};
+
+            for (int layer = 0; layer < glowLayers; layer++) {
+                float currentOffset = arraylistOffset.getValue();
+
+                for (Module module : arrayListModule) {
+                    if (shouldSkipModule(module)) continue;
+
+                    String text = prepareModuleText(module);
+                    float animationValue = (float) module.animation.getValue();
+                    float textWidth = getTextWidth(text);
+                    float textOffsetX = calculateTextOffsetX(scaledResolution().getScaledWidth(), textWidth, animationValue);
+                    float rectHeight = calculateRectHeight(text);
+
+                    Color[] colors = getColors(currentOffset, rectHeight, animationValue);
+                    Color color = colors[0];
+                    Color secondColor = colors[1];
+
+                    float[] rounding = calculateBackgroundRadius(module, textWidth);
+
+                    float glowSize = layerSizes[layer];
+                    float glowOpacity = layerOpacities[layer];
+
+                    float glowX = textOffsetX - glowSize;
+                    float glowY = currentOffset - glowSize - 1.25f;
+                    float glowWidth = textWidth + (glowSize * 2) + 4.5f;
+                    float glowHeight = rectHeight + (glowSize * 2) + 0.5f;
+                    float glowRadius = Math.max(rounding[0], rounding[1]) + glowSize * 0.8f;
+
+                    int finalOpacity = (int) (255 * glowOpacity * animationValue * 0.6f);
+
+                    Color glowColor1 = new Color(color.getRed(), color.getGreen(), color.getBlue(), finalOpacity);
+                    Color glowColor2 = new Color(secondColor.getRed(), secondColor.getGreen(), secondColor.getBlue(), finalOpacity);
+
+                    switch (colorMode.getValue().toLowerCase()) {
+                        case "fade" -> renderSmoothGradientGlow(glowX, glowY, glowWidth, glowHeight, glowRadius, glowColor1, glowColor2, glowSize);
+                        case "breathe" -> {
+                            long time = System.currentTimeMillis();
+                            float breatheAlpha = (float) (Math.sin(time * 0.003) * 0.4 + 0.6);
+                            Color breatheColor = new Color(glowColor1.getRed(), glowColor1.getGreen(), glowColor1.getBlue(), (int) (finalOpacity * breatheAlpha));
+                            renderSmoothRadialGlow(glowX, glowY, glowWidth, glowHeight, glowRadius, breatheColor, glowSize);
+                        }
+                        default -> renderSmoothRadialGlow(glowX, glowY, glowWidth, glowHeight, glowRadius, glowColor1, glowSize);
+                    }
+
+                    currentOffset += rectHeight * animationValue;
+                }
+            }
+
+            glowFramebuffer.unbindFramebuffer();
+            mc.getFramebuffer().bindFramebuffer(true);
+
+            GlowUtil glowUtil = new GlowUtil();
+            glowUtil.glow(glowFramebuffer);
+
+        } catch (Exception e) {
+        } finally {
+            if (textureEnabled) {
+                GlStateManager.enableTexture2D();
+            } else {
+                GlStateManager.disableTexture2D();
+            }
+
+            if (blendEnabled) {
+                GlStateManager.enableBlend();
+            } else {
+                GlStateManager.disableBlend();
+            }
+
+            GlStateManager.bindTexture(prevTexture);
+            GlStateManager.popMatrix();
+            mc.getFramebuffer().bindFramebuffer(true);
+        }
     }
 
-    private void addBlurEffect(float x, float y, float width, float height, float[] rounding) {
+    private void renderSmoothGradientGlow(float x, float y, float width, float height, float radius, Color color1, Color color2, float glowSize) {
+        RenderUtil.drawRoundedRect(x, y, width, height, radius, color1, color2, color1, color2);
 
+        float fadeSteps = 8.0f;
+        for (int i = 0; i < fadeSteps; i++) {
+            float alpha = (fadeSteps - i) / fadeSteps * 0.3f;
+            float stepSize = glowSize * (i / fadeSteps);
+
+            Color fadeColor1 = new Color(color1.getRed(), color1.getGreen(), color1.getBlue(), (int)(color1.getAlpha() * alpha));
+            Color fadeColor2 = new Color(color2.getRed(), color2.getGreen(), color2.getBlue(), (int)(color2.getAlpha() * alpha));
+
+            RenderUtil.drawRoundedRect(x - stepSize, y - stepSize, width + stepSize * 2, height + stepSize * 2, radius + stepSize, fadeColor1, fadeColor2, fadeColor1, fadeColor2);
+        }
+    }
+
+    private void renderSmoothRadialGlow(float x, float y, float width, float height, float radius, Color color, float glowSize) {
+        RenderUtil.drawRoundedRect(x, y, width, height, radius, color, color, color, color);
+
+        float fadeSteps = 10.0f;
+        for (int i = 0; i < fadeSteps; i++) {
+            float progress = i / fadeSteps;
+            float alpha = (1.0f - progress) * 0.4f;
+            float stepSize = glowSize * progress;
+
+            Color fadeColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), (int)(color.getAlpha() * alpha));
+
+            RenderUtil.drawRoundedRect(x - stepSize, y - stepSize, width + stepSize * 2, height + stepSize * 2, radius + stepSize * 0.7f, fadeColor, fadeColor, fadeColor, fadeColor);
+        }
     }
 
     private void renderSidebar(Module module, float textOffsetX, float textWidth, float offset, float rectHeight, Color color, Color secondColor, float lastWidth) {
@@ -501,7 +641,7 @@ public class HUD extends Module {
                 }
             }
         }
-    }
+    } 
 
     private void renderText(String text, float textOffsetX, float offset, Color color) {
         if (textCase.is("Lower")) {

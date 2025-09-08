@@ -7,7 +7,7 @@ import fr.ambient.event.impl.client.ClientPreRunTickEvent;
 import fr.ambient.event.impl.client.ClientRunTickEvent;
 import fr.ambient.event.impl.world.WorldLoadEvent;
 import fr.ambient.module.impl.player.Breaker;
-import fr.ambient.protection.ProtectedLaunch;
+import fr.ambient.ProtectedLaunch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;

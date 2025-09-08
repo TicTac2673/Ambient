@@ -5,7 +5,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.authlib.properties.PropertyMap.Serializer;
-import fr.ambient.protection.backend.api.HWID;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -121,14 +120,6 @@ public class Main {
         });
 
         String uidValue = optionset.valueOf(uid);
-
-        System.out.printf(
-                    """
-                    Your HWID is:
-                    %s
-                    If you cannot launch the client, send it to @getrektnerds on Discord.
-                    """, HWID.getHWID()
-        );
 
         Thread.currentThread().setName("Client thread");
         new Minecraft(gameconfiguration).run(uidValue);

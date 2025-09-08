@@ -119,7 +119,7 @@ public class Module implements InstanceAccess {
     public void setEnabled(boolean enabled) {
 
         if(enabled != this.enabled && !getOnlyOnKeyHold().getValue() && !(this instanceof ClickGui) && !(this instanceof Freelook)){
-            NotificationManager.addNotification("Module", this.name + (enabled ? EnumChatFormatting.GREEN + " Enabled" : EnumChatFormatting.RED + " Disabled"), enabled ? NotificationType.INFO : NotificationType.WARNING);
+            NotificationManager.addNotification("Module", this.getName() + (enabled ? EnumChatFormatting.GREEN + " Enabled" : EnumChatFormatting.RED + " Disabled"), enabled ? NotificationType.INFO : NotificationType.WARNING);
         }
 
         setEnableNoNotif(enabled);

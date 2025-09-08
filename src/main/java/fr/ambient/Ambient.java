@@ -32,7 +32,11 @@ import java.io.File;
 @Setter
 public final class Ambient {
     private static final Ambient INSTANCE = new Ambient();
-    private String uid, username, token,rank, discord;
+    private String uid = "1";
+    private String username = "User"; // TODO: mc.getSession().getUsername()
+    private String token = "lol";
+    private String rank = "Dev";
+    private String discord = "";
 
     private String version = "3.0";
 

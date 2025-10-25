@@ -97,22 +97,22 @@ public class Cosmetics extends Module {
         File saveFile = new File(saveFolder, capeId);
 
 
-        CompletableFuture<ImageObject> future = RequestUtil.downloadAndLoad(
-                "https://legitclient.com/api/cosmetic?type=cape&id=" + capeId, saveFile // hello hi sir its cape type !
-        ).thenApply(image -> {
-            capes.put(capeId, image);
-            pendingRequests.remove(capeId);
-            return image;
-        }).exceptionally(ex -> {
-            pendingRequests.remove(capeId);
-            capes.put(capeId, notFound);
-            ChatUtil.display("Query Cape failed " + capeId);
-            System.err.println("Failed to load cape: " + ex.getMessage());
-            return null;
-        });
+//        CompletableFuture<ImageObject> future = RequestUtil.downloadAndLoad(
+//                "https://legitclient.com/api/cosmetic?type=cape&id=" + capeId, saveFile // hello hi sir its cape type !
+//        ).thenApply(image -> {
+//            capes.put(capeId, image);
+//            pendingRequests.remove(capeId);
+//            return image;
+//        }).exceptionally(ex -> {
+//            pendingRequests.remove(capeId);
+//            capes.put(capeId, notFound);
+//            ChatUtil.display("Query Cape failed " + capeId);
+//            System.err.println("Failed to load cape: " + ex.getMessage());
+//            return null;
+//        });
 
-        pendingRequests.put(capeId, future);
-        return future;
+//        pendingRequests.put(capeId, future);
+        return null;
     }
 
     @SneakyThrows
@@ -141,22 +141,22 @@ public class Cosmetics extends Module {
         File saveFile = new File(saveFolder, haloId);
 
 
-        CompletableFuture<ImageObject> future = RequestUtil.downloadAndLoad(
-                "https://legitclient.com/api/cosmetic?type=halo&id=" + haloId, saveFile // hello hi sir its cape type !
-        ).thenApply(image -> {
-            halos.put(haloId, image);
-            pendingRequests.remove(haloId);
-            return image;
-        }).exceptionally(ex -> {
-            pendingRequests.remove(haloId);
-            halos.put(haloId, notFound);
-            ChatUtil.display("Query Halo failed " + haloId);
-            System.err.println("Failed to load cape: " + ex.getMessage());
-            return null;
-        });
+//        CompletableFuture<ImageObject> future = RequestUtil.downloadAndLoad(
+//                "https://legitclient.com/api/cosmetic?type=halo&id=" + haloId, saveFile // hello hi sir its cape type !
+//        ).thenApply(image -> {
+//            halos.put(haloId, image);
+//            pendingRequests.remove(haloId);
+//            return image;
+//        }).exceptionally(ex -> {
+//            pendingRequests.remove(haloId);
+//            halos.put(haloId, notFound);
+//            ChatUtil.display("Query Halo failed " + haloId);
+//            System.err.println("Failed to load cape: " + ex.getMessage());
+//            return null;
+//        });
 
-        pendingRequests.put(haloId, future);
-        return future;
+//        pendingRequests.put(haloId, future);
+        return null;
     }
 
 

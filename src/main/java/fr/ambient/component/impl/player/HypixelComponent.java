@@ -84,18 +84,18 @@ public class HypixelComponent extends Component {
             known_cheaters_or_alts.clear();
 
 
-            String requestResult = RequestUtil.requestResultAll.apply("https://legitclient.com/api/cheater?mode=get");
-
-            JsonArray array = JsonParser.parseString(requestResult).getAsJsonArray();
-
-
-            for(JsonElement a : array.asList()){
-                try {
-                    String bg = a.getAsString().replaceFirst( "([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]+)", "$1-$2-$3-$4-$5" );
-                    known_cheaters_or_alts.add(UUID.fromString(bg));
-                }catch (Exception ignored){
-                }
-            }
+//            String requestResult = RequestUtil.requestResultAll.apply("https://legitclient.com/api/cheater?mode=get");
+//
+//            JsonArray array = JsonParser.parseString(requestResult).getAsJsonArray();
+//
+//
+//            for(JsonElement a : array.asList()){
+//                try {
+//                    String bg = a.getAsString().replaceFirst( "([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]+)", "$1-$2-$3-$4-$5" );
+//                    known_cheaters_or_alts.add(UUID.fromString(bg));
+//                }catch (Exception ignored){
+//                }
+//            }
 
 
 

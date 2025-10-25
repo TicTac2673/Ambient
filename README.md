@@ -18,10 +18,14 @@ very cool repo !
  2. build it using gradle:
 
     ```bash
-    ./gradlew build or gradlew.bat build if on windows
+    ./gradlew build
+    ```
+    or if ur using windows
+    ```bash
+    gradlew.bat build
     ```
 
- 3. how to run:
+ 4. how to run:
 
     open a terminal window and run this command
     ```bash

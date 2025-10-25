@@ -8,7 +8,25 @@ very cool repo !
 
 ## how to use?
 
-clone the repo and build it
+1. clone da repo:
+
+    ```bash
+    git clone https://github.com/ImLegiitXD/Ambient.git  
+    cd Ambient
+    ```
+
+ 2. build it using gradle:
+
+    ```bash
+    ./gradlew build or gradlew.bat build if on windows
+    ```
+
+ 3. how to run:
+
+    open a terminal window and run this command
+    ```bash
+    java -cp "client.jar;assets.jar" Start
+    ```
 
 # ClickGUI:
 
